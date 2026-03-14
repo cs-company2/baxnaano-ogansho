@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="so">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hospital Marketing System</title>
+<link rel="shortcut icon" href="images/images.png" type="image/x-icon">
+<script type="module" src="https://www.gstatic.com/firebasejs/10.1.0/firebase-app.js"></script>
+<script type="module" src="https://www.gstatic.com/firebasejs/10.1.0/firebase-firestore.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+body{margin:0;font-family:Arial;background:linear-gradient(135deg,#141e30,#243b55);color:white;height:100vh;display:flex;justify-content:center;align-items:center;}
+.card{background:rgba(255,255,255,0.1);padding:30px;border-radius:15px;width:350px;backdrop-filter:blur(10px);animation:fade 1s;}
+input,select{width:100%;padding:10px;margin:10px 0;border:none;border-radius:6px;}
+button{width:100%;padding:12px;background:#00c6ff;border:none;border-radius:6px;color:white;cursor:pointer;transition:.3s;}
+button:hover{transform:scale(1.05);background:#0072ff;}
+.dashboard{display:none;width:90%;height:90%;}
+.top{display:flex;justify-content:space-between;margin-bottom:20px;align-items:center;}
+.stats{display:flex;gap:20px;flex-wrap:wrap;}
+.box{background:rgba(255,255,255,0.1);padding:20px;border-radius:10px;width:120px;text-align:center;animation:pop .7s;margin-bottom:10px;}
+@keyframes fade{from{opacity:0;transform:translateY(20px)}to{opacity:1}}
+@keyframes pop{from{transform:scale(.7)}to{transform:scale(1)}}
+/* Tooltip */
+.tooltip{position:relative;display:inline-block;cursor:help;}
+.tooltip .tooltiptext{visibility:hidden;width:200px;background-color:#555;color:#fff;text-align:center;border-radius:6px;padding:5px;position:absolute;z-index:1;bottom:125%;left:50%;margin-left:-100px;opacity:0;transition:opacity 0.5s;}
+.tooltip .tooltiptext::after{content:"";position:absolute;top:100%;left:50%;margin-left:-5px;border-width:5px;border-style:solid;border-color:#555 transparent transparent transparent;}
+.tooltip:hover .tooltiptext{visibility:visible;opacity:1;}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div class="card" id="login">
+    <img src="images/images.png"WIDTH="100" HEIGHT="100" style="display:block;margin:0 auto 20px auto;">
+<h2>BAXNAANO MARAYNTA </h2>
+<input type="text" id="user" placeholder="Username">
+<input type="password" id="pass" placeholder="Password">
+<button onclick="login()">Login</button>
+</div>
+
+<!-- FORM -->
+<div class="card" id="form" style="display:none">
+<h2>Halkee Naga Aragtay</h2>
+<input id="name" placeholder="Magac" title="Geli magacaaga buuxa">
+<input id="phone" placeholder="Phone" title="Geli lambarkaaga telefoonka">
+
+<select id="doctor" title="Dooro doctor">
+<option value="">Dooro Dhakhtar</option>
+<option>Dr Harith</option>
+<option>Dr Yaxye Shoole</option>
+<option>Dr Hersi</option>
+</select>
+
+<select id="source" title="Dooro meesha aad naga aragtay, TikTok, Facebook, YouTube, Saxib">
+<option value="">Dooro</option>
+<option>TikTok</option>
+<option>Facebook</option>
+<option>YouTube</option>
+<option>Saxib</option>
+</select>
+
+<button onclick="save()">Save</button>
+<button onclick="openDashboard()">Dashboard</button>
+</div>
+
+<!-- DASHBOARD -->
+<div class="dashboard" id="dashboard">
+<div class="top">
+<h2>Statistics</h2>
+<div class="tooltip">
+  <span>ℹ</span>
+  <span class="tooltiptext">Tirakoobka wuxuu muujinayaa inta bukaanka ka timid TikTok, Facebook, YouTube ama Saxib.</span>
+</div>
+<select id="dashboardDoctor" onchange="updateDashboard()">
+  <option value="All">All</option>
+  <option value="Dr Harith">Dr Harith</option>
+  <option value="Dr Yaxye Shoole">Dr Yaxye Shoole</option>
+  <option value="Dr Hersi">Dr Hersi</option>
+</select>
+<button onclick="logout()">Logout</button>
+</div>
+
+<div class="stats">
+<div class="box"><h3 id="harith-tiktok">0</h3><p>Dr Harith TikTok</p></div>
+<div class="box"><h3 id="harith-facebook">0</h3><p>Dr Harith Facebook</p></div>
+<div class="box"><h3 id="harith-youtube">0</h3><p>Dr Harith YouTube</p></div>
+<div class="box"><h3 id="harith-saxib">0</h3><p>Dr Harith Saxib</p></div>
+
+<div class="box"><h3 id="yaxye-tiktok">0</h3><p>Dr Yaxye Shoole TikTok</p></div>
+<div class="box"><h3 id="yaxye-facebook">0</h3><p>Dr Yaxye Shoole Facebook</p></div>
+<div class="box"><h3 id="yaxye-youtube">0</h3><p>Dr Yaxye Shoole YouTube</p></div>
+<div class="box"><h3 id="yaxye-saxib">0</h3><p>Dr Yaxye Shoole Saxib</p></div>
+
+<div class="box"><h3 id="hersi-tiktok">0</h3><p>Dr Hersi TikTok</p></div>
+<div class="box"><h3 id="hersi-facebook">0</h3><p>Dr Hersi Facebook</p></div>
+<div class="box"><h3 id="hersi-youtube">0</h3><p>Dr Hersi YouTube</p></div>
+<div class="box"><h3 id="hersi-saxib">0</h3><p>Dr Hersi Saxib</p></div>
+</div>
+
+<canvas id="chart" style="margin-top:40px;"></canvas>
+</div>
+
+<script type="module">
+// Firebase Config (badal xogtaada Firebase)
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-app.js";
+import { getFirestore, doc, setDoc, updateDoc, increment, onSnapshot } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "API_KEY",
+  authDomain: "PROJECT_ID.firebaseapp.com",
+  projectId: "PROJECT_ID",
+  storageBucket: "PROJECT_ID.appspot.com",
+  messagingSenderId: "SENDER_ID",
+  appId: "APP_ID"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+// Login
+function login(){
+  const u=document.getElementById("user").value;
+  const p=document.getElementById("pass").value;
+  if(u==="admin" && p==="1234"){
+    document.getElementById("login").style.display="none";
+    document.getElementById("form").style.display="block";
+  }else{alert("Username/Password khaldan")}
+}
+window.login=login;
+function logout(){location.reload()}
+window.logout=logout;
+
+// Save function
+function save() {
+  const doctor = document.getElementById("doctor").value;
+  const source = document.getElementById("source").value;
+  if (!doctor || !source) {
+    alert("Fadlan dooro doctor iyo source");
+    return;
+  }
+  // Get current data from localStorage
+  let data = localStorage.getItem("patients_sources");
+  if (data) {
+    data = JSON.parse(data);
+  } else {
+    data = {
+      "Dr Harith": { TikTok: 0, Facebook: 0, YouTube: 0, Saxib: 0 },
+      "Dr Yaxye Shoole": { TikTok: 0, Facebook: 0, YouTube: 0, Saxib: 0 },
+      "Dr Hersi": { TikTok: 0, Facebook: 0, YouTube: 0, Saxib: 0 }
+    };
+  }
+  // Increment the count
+  if (!data[doctor]) {
+    data[doctor] = { TikTok: 0, Facebook: 0, YouTube: 0, Saxib: 0 };
+  }
+  if (!data[doctor][source]) {
+    data[doctor][source] = 0;
+  }
+  data[doctor][source] += 1;
+  // Save back to localStorage
+  localStorage.setItem("patients_sources", JSON.stringify(data));
+  alert("Saved successfully!");
+}
+window.save=save;
+
+// Open Dashboard
+function openDashboard(){
+  document.getElementById("form").style.display="none";
+  document.getElementById("dashboard").style.display="block";
+  updateDashboard();
+}
+window.openDashboard=openDashboard;
+
+// Update Dashboard
+function updateDashboard() {
+  const doctor = document.getElementById("dashboardDoctor").value;
+  let data = localStorage.getItem("patients_sources");
+  if (data) {
+    data = JSON.parse(data);
+  } else {
+    data = {
+      "Dr Harith": { TikTok: 0, Facebook: 0, YouTube: 0, Saxib: 0 },
+      "Dr Yaxye Shoole": { TikTok: 0, Facebook: 0, YouTube: 0, Saxib: 0 },
+      "Dr Hersi": { TikTok: 0, Facebook: 0, YouTube: 0, Saxib: 0 }
+    };
+  }
+  // Update each doctor's stats
+  const harith = data["Dr Harith"] || { TikTok: 0, Facebook: 0, YouTube: 0, Saxib: 0 };
+  const yaxye = data["Dr Yaxye Shoole"] || { TikTok: 0, Facebook: 0, YouTube: 0, Saxib: 0 };
+  const hersi = data["Dr Hersi"] || { TikTok: 0, Facebook: 0, YouTube: 0, Saxib: 0 };
+
+  document.getElementById("harith-tiktok").innerText = harith.TikTok;
+  document.getElementById("harith-facebook").innerText = harith.Facebook;
+  document.getElementById("harith-youtube").innerText = harith.YouTube;
+  document.getElementById("harith-saxib").innerText = harith.Saxib;
+
+  document.getElementById("yaxye-tiktok").innerText = yaxye.TikTok;
+  document.getElementById("yaxye-facebook").innerText = yaxye.Facebook;
+  document.getElementById("yaxye-youtube").innerText = yaxye.YouTube;
+  document.getElementById("yaxye-saxib").innerText = yaxye.Saxib;
+
+  document.getElementById("hersi-tiktok").innerText = hersi.TikTok;
+  document.getElementById("hersi-facebook").innerText = hersi.Facebook;
+  document.getElementById("hersi-youtube").innerText = hersi.YouTube;
+  document.getElementById("hersi-saxib").innerText = hersi.Saxib;
+
+  // Chart for selected doctor or all
+  let t = 0, f = 0, y = 0, s = 0;
+  if (doctor === "All") {
+    t = harith.TikTok + yaxye.TikTok + hersi.TikTok;
+    f = harith.Facebook + yaxye.Facebook + hersi.Facebook;
+    y = harith.YouTube + yaxye.YouTube + hersi.YouTube;
+    s = harith.Saxib + yaxye.Saxib + hersi.Saxib;
+  } else if (doctor === "Dr Harith") {
+    t = harith.TikTok;
+    f = harith.Facebook;
+    y = harith.YouTube;
+    s = harith.Saxib;
+  } else if (doctor === "Dr Yaxye Shoole") {
+    t = yaxye.TikTok;
+    f = yaxye.Facebook;
+    y = yaxye.YouTube;
+    s = yaxye.Saxib;
+  } else if (doctor === "Dr Hersi") {
+    t = hersi.TikTok;
+    f = hersi.Facebook;
+    y = hersi.YouTube;
+    s = hersi.Saxib;
+  }
+  const ctx = document.getElementById("chart");
+  new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels: ["TikTok", "Facebook", "YouTube", "Saxib"],
+      datasets: [{
+        label: `Patients Source (${doctor})`,
+        data: [t, f, y, s],
+        backgroundColor: ["#ff6384", "#36a2eb", "#ffce56", "#4bc0c0"]
+      }]
+    },
+    options: { responsive: true, animation: { duration: 1000 } }
+  });
+}
+window.updateDashboard=updateDashboard;
+
+</script>
+
+</body>
+</html>
