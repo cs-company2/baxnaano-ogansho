@@ -8,6 +8,7 @@
 <script type="module" src="https://www.gstatic.com/firebasejs/10.1.0/firebase-app.js"></script>
 <script type="module" src="https://www.gstatic.com/firebasejs/10.1.0/firebase-firestore.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <style>
 body{margin:0;font-family:Arial;background:linear-gradient(135deg,#141e30,#243b55);color:white;height:100vh;display:flex;justify-content:center;align-items:center;}
 .card{background:rgba(255,255,255,0.1);padding:30px;border-radius:15px;width:350px;backdrop-filter:blur(10px);animation:fade 1s;}
@@ -25,6 +26,24 @@ button:hover{transform:scale(1.05);background:#0072ff;}
 .tooltip .tooltiptext{visibility:hidden;width:200px;background-color:#555;color:#fff;text-align:center;border-radius:6px;padding:5px;position:absolute;z-index:1;bottom:125%;left:50%;margin-left:-100px;opacity:0;transition:opacity 0.5s;}
 .tooltip .tooltiptext::after{content:"";position:absolute;top:100%;left:50%;margin-left:-5px;border-width:5px;border-style:solid;border-color:#555 transparent transparent transparent;}
 .tooltip:hover .tooltiptext{visibility:visible;opacity:1;}
+.summary { margin-top: 20px; background: rgba(255,255,255,0.1); padding: 20px; border-radius: 10px; }
+.summary p { margin-bottom: 10px; font-size: 14px; }
+#summary-content { font-family: monospace; white-space: pre-line; }
+.doctor-summary { margin: 10px 0; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px; }
+.doctor-name { font-weight: bold; color: #00c6ff; font-size: 16px; }
+.source { display: inline-block; background: rgba(255,255,255,0.1); padding: 4px 8px; border-radius: 5px; margin: 0 2px; font-size: 14px; }
+.tiktok { background: #ff0050; color: white; }
+.facebook { background: #1877f2; color: white; }
+.youtube { background: #ff0000; color: white; }
+.friend { background: #28a745; color: white; }
+.referral { background: #6f42c1; color: white; }
+.walkin { background: #fd7e14; color: white; }
+.summary-table { width: 100%; border-collapse: collapse; margin: 10px 0; background: rgba(255,255,255,0.05); border-radius: 8px; overflow: hidden; }
+.summary-table th { background: rgba(0,198,255,0.3); color: white; padding: 12px; text-align: left; font-weight: bold; }
+.summary-table td { padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+.doctor-cell { font-weight: bold; color: #00c6ff; font-size: 16px; }
+.sources-cell { text-align: left; }
+.print-header { display: none; text-align: center; margin-bottom: 20px; }
 </style>
 </head>
 <body>
@@ -57,6 +76,8 @@ button:hover{transform:scale(1.05);background:#0072ff;}
 <option>Facebook</option>
 <option>YouTube</option>
 <option>Saxib</option>
+<option>Referral</option>
+<option>Walk-in</option>
 </select>
 
 <button onclick="save()">Save</button>
@@ -77,7 +98,15 @@ button:hover{transform:scale(1.05);background:#0072ff;}
   <option value="Dr Yaxye Shoole">Dr Yaxye Shoole</option>
   <option value="Dr Hersi">Dr Hersi</option>
 </select>
+<button onclick="generatePDF()">Download PDF</button>
+<button onclick="clearData()">Clear Data</button>
 <button onclick="logout()">Logout</button>
+</div>
+
+<div class="print-header">
+<img src="images/images.png" width="100" height="100" style="display:block;margin:0 auto;">
+<h1>Rehabilitation Hospital</h1>
+<h2>Patient Source Analysis</h2>
 </div>
 
 <div class="stats">
@@ -85,16 +114,30 @@ button:hover{transform:scale(1.05);background:#0072ff;}
 <div class="box"><h3 id="harith-facebook">0</h3><p>Dr Harith Facebook</p></div>
 <div class="box"><h3 id="harith-youtube">0</h3><p>Dr Harith YouTube</p></div>
 <div class="box"><h3 id="harith-saxib">0</h3><p>Dr Harith Saxib</p></div>
+<div class="box"><h3 id="harith-walkin">0</h3><p>Dr Harith Walk-in</p></div>
+<div class="box"><h3 id="harith-referral">0</h3><p>Dr Harith Referral</p></div>
+
 
 <div class="box"><h3 id="yaxye-tiktok">0</h3><p>Dr Yaxye Shoole TikTok</p></div>
 <div class="box"><h3 id="yaxye-facebook">0</h3><p>Dr Yaxye Shoole Facebook</p></div>
 <div class="box"><h3 id="yaxye-youtube">0</h3><p>Dr Yaxye Shoole YouTube</p></div>
 <div class="box"><h3 id="yaxye-saxib">0</h3><p>Dr Yaxye Shoole Saxib</p></div>
+<div class="box"><h3 id="yaxye-referral">0</h3><p>Dr Yaxye Shoole Referral</p></div>
+<div class="box"><h3 id="yaxye-walkin">0</h3><p>Dr Yaxye Shoole Walk-in</p></div>
+
+
 
 <div class="box"><h3 id="hersi-tiktok">0</h3><p>Dr Hersi TikTok</p></div>
 <div class="box"><h3 id="hersi-facebook">0</h3><p>Dr Hersi Facebook</p></div>
 <div class="box"><h3 id="hersi-youtube">0</h3><p>Dr Hersi YouTube</p></div>
 <div class="box"><h3 id="hersi-saxib">0</h3><p>Dr Hersi Saxib</p></div>
+<div class="box"><h3 id="hersi-referral">0</h3><p>Dr Hersi Referral</p></div>
+<div class="box"><h3 id="hersi-walkin">0</h3><p>Dr Hersi Walk-in</p></div>
+</div>
+
+<div class="summary">
+<p>Qaybtan waxay muujinaysaa tirada bukaannada uu dhakhtar walba ka helay kanaallo kala duwan (📱 TikTok, 📘 Facebook, 🔁 referrals, 🚶 walk-ins), si fudud oo hal-line ah loo arki karo..</p>
+<div id="summary-content"></div>
 </div>
 
 <canvas id="chart" style="margin-top:40px;"></canvas>
@@ -138,28 +181,32 @@ function save() {
     alert("Fadlan dooro doctor iyo source");
     return;
   }
-  // Get current data from localStorage
-  let data = localStorage.getItem("patients_sources");
-  if (data) {
-    data = JSON.parse(data);
-  } else {
-    data = {
-      "Dr Harith": { TikTok: 0, Facebook: 0, YouTube: 0, Saxib: 0 },
-      "Dr Yaxye Shoole": { TikTok: 0, Facebook: 0, YouTube: 0, Saxib: 0 },
-      "Dr Hersi": { TikTok: 0, Facebook: 0, YouTube: 0, Saxib: 0 }
-    };
+  try {
+    // Get current data from localStorage
+    let data = localStorage.getItem("patients_sources");
+    if (data) {
+      data = JSON.parse(data);
+    } else {
+      data = {
+        "Dr Harith": { TikTok: 0, Facebook: 0, YouTube: 0, Saxib: 0, Referral: 0, "Walk-in": 0 },
+        "Dr Yaxye Shoole": { TikTok: 0, Facebook: 0, YouTube: 0, Saxib: 0, Referral: 0, "Walk-in": 0 },
+        "Dr Hersi": { TikTok: 0, Facebook: 0, YouTube: 0, Saxib: 0, Referral: 0, "Walk-in": 0 }
+      };
+    }
+    // Increment the count
+    if (!data[doctor]) {
+      data[doctor] = { TikTok: 0, Facebook: 0, YouTube: 0, Saxib: 0, Referral: 0, "Walk-in": 0 };
+    }
+    if (!data[doctor][source]) {
+      data[doctor][source] = 0;
+    }
+    data[doctor][source] += 1;
+    // Save back to localStorage
+    localStorage.setItem("patients_sources", JSON.stringify(data));
+    alert("Saved successfully!");
+  } catch (e) {
+    alert("Error saving data. Please check your browser settings for localStorage.");
   }
-  // Increment the count
-  if (!data[doctor]) {
-    data[doctor] = { TikTok: 0, Facebook: 0, YouTube: 0, Saxib: 0 };
-  }
-  if (!data[doctor][source]) {
-    data[doctor][source] = 0;
-  }
-  data[doctor][source] += 1;
-  // Save back to localStorage
-  localStorage.setItem("patients_sources", JSON.stringify(data));
-  alert("Saved successfully!");
 }
 window.save=save;
 
@@ -174,20 +221,32 @@ window.openDashboard=openDashboard;
 // Update Dashboard
 function updateDashboard() {
   const doctor = document.getElementById("dashboardDoctor").value;
-  let data = localStorage.getItem("patients_sources");
-  if (data) {
-    data = JSON.parse(data);
-  } else {
+  let data;
+  try {
+    data = localStorage.getItem("patients_sources");
+    if (data) {
+      data = JSON.parse(data);
+    } else {
+      data = {
+        "Dr Harith": { TikTok: 0, Facebook: 0, YouTube: 0, Saxib: 0, Referral: 0, "Walk-in": 0 },
+        "Dr Yaxye Shoole": { TikTok: 0, Facebook: 0, YouTube: 0, Saxib: 0, Referral: 0, "Walk-in": 0 },
+        "Dr Hersi": { TikTok: 0, Facebook: 0, YouTube: 0, Saxib: 0, Referral: 0, "Walk-in": 0 }
+      };
+    }
+  } catch (e) {
+    console.error('Error loading data from localStorage:', e);
+    alert('Error loading data. Using default values.');
     data = {
-      "Dr Harith": { TikTok: 0, Facebook: 0, YouTube: 0, Saxib: 0 },
-      "Dr Yaxye Shoole": { TikTok: 0, Facebook: 0, YouTube: 0, Saxib: 0 },
-      "Dr Hersi": { TikTok: 0, Facebook: 0, YouTube: 0, Saxib: 0 }
+      "Dr Harith": { TikTok: 0, Facebook: 0, YouTube: 0, Saxib: 0, Referral: 0, "Walk-in": 0 },
+      "Dr Yaxye Shoole": { TikTok: 0, Facebook: 0, YouTube: 0, Saxib: 0, Referral: 0, "Walk-in": 0 },
+      "Dr Hersi": { TikTok: 0, Facebook: 0, YouTube: 0, Saxib: 0, Referral: 0, "Walk-in": 0 }
     };
   }
+
   // Update each doctor's stats
-  const harith = data["Dr Harith"] || { TikTok: 0, Facebook: 0, YouTube: 0, Saxib: 0 };
-  const yaxye = data["Dr Yaxye Shoole"] || { TikTok: 0, Facebook: 0, YouTube: 0, Saxib: 0 };
-  const hersi = data["Dr Hersi"] || { TikTok: 0, Facebook: 0, YouTube: 0, Saxib: 0 };
+  const harith = data["Dr Harith"] || { TikTok: 0, Facebook: 0, YouTube: 0, Saxib: 0, Referral: 0, "Walk-in": 0 };
+  const yaxye = data["Dr Yaxye Shoole"] || { TikTok: 0, Facebook: 0, YouTube: 0, Saxib: 0, Referral: 0, "Walk-in": 0 };
+  const hersi = data["Dr Hersi"] || { TikTok: 0, Facebook: 0, YouTube: 0, Saxib: 0, Referral: 0, "Walk-in": 0 };
 
   document.getElementById("harith-tiktok").innerText = harith.TikTok;
   document.getElementById("harith-facebook").innerText = harith.Facebook;
@@ -203,6 +262,25 @@ function updateDashboard() {
   document.getElementById("hersi-facebook").innerText = hersi.Facebook;
   document.getElementById("hersi-youtube").innerText = hersi.YouTube;
   document.getElementById("hersi-saxib").innerText = hersi.Saxib;
+
+  // Generate summary
+  let summaryHTML = '<table class="summary-table"><thead><tr><th>Doctor</th><th>Patient Sources</th></tr></thead><tbody>';
+  const doctors = ['Dr Harith', 'Dr Yaxye Shoole', 'Dr Hersi'];
+  doctors.forEach(doc => {
+    const d = data[doc] || { TikTok: 0, Facebook: 0, YouTube: 0, Saxib: 0, Referral: 0, "Walk-in": 0 };
+    const sources = [];
+    if (d.TikTok > 0) sources.push(`<span class="source tiktok">📱 TikTok ${d.TikTok}</span>`);
+    if (d.Facebook > 0) sources.push(`<span class="source facebook">🌐 Facebook ${d.Facebook}</span>`);
+    if (d.YouTube > 0) sources.push(`<span class="source youtube">🎥 YouTube ${d.YouTube}</span>`);
+    if (d.Saxib > 0) sources.push(`<span class="source friend">👥 Friend ${d.Saxib}</span>`);
+    if (d.Referral > 0) sources.push(`<span class="source referral">🔗 Referral ${d.Referral}</span>`);
+    if (d["Walk-in"] > 0) sources.push(`<span class="source walkin">🚶 Walk-in ${d["Walk-in"]}</span>`);
+    if (sources.length > 0) {
+      summaryHTML += `<tr><td class="doctor-cell">${doc}</td><td class="sources-cell">${sources.join(' | ')}</td></tr>`;
+    }
+  });
+  summaryHTML += '</tbody></table>';
+  document.getElementById('summary-content').innerHTML = summaryHTML;
 
   // Chart for selected doctor or all
   let t = 0, f = 0, y = 0, s = 0;
@@ -242,6 +320,58 @@ function updateDashboard() {
   });
 }
 window.updateDashboard=updateDashboard;
+
+function clearData() {
+  const password = prompt('Enter password to clear data:');
+  if (password === 'ciise00') {
+    if (confirm('Are you sure you want to clear all patient data? This cannot be undone.')) {
+      localStorage.removeItem('patients_sources');
+      updateDashboard();
+      alert('All data has been cleared.');
+    }
+  } else {
+    alert('Incorrect password.');
+  }
+}
+window.clearData=clearData;
+
+function generatePDF() {
+  // Temporarily modify the page for PDF
+  const topDiv = document.querySelector('.top');
+  const originalDisplay = topDiv.style.display;
+  topDiv.style.display = 'none';
+
+  const printHeader = document.querySelector('.print-header');
+  const headerOriginalDisplay = printHeader.style.display;
+  printHeader.style.display = 'block';
+
+  // Add date to header
+  let dateP = printHeader.querySelector('#pdf-date');
+  if (!dateP) {
+    dateP = document.createElement('p');
+    dateP.id = 'pdf-date';
+    dateP.textContent = 'Generated on: ' + new Date().toLocaleDateString();
+    dateP.style.fontSize = '10px';
+    dateP.style.color = '#666';
+    dateP.style.margin = '5px 0';
+    printHeader.appendChild(dateP);
+  }
+
+  const opt = {
+    margin: 0.5,
+    filename: 'patient-source-analysis.pdf',
+    image: { type: 'jpeg', quality: 0.98 },
+    html2canvas: { scale: 2, useCORS: true, allowTaint: true },
+    jsPDF: { unit: 'in', format: 'a5', orientation: 'portrait' }
+  };
+
+  html2pdf().set(opt).from(document.getElementById('dashboard')).save().then(() => {
+    // Restore original state
+    topDiv.style.display = originalDisplay;
+    printHeader.style.display = headerOriginalDisplay;
+  });
+}
+window.generatePDF=generatePDF;
 
 </script>
 
